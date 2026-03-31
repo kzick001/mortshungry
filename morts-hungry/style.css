@@ -1,0 +1,50 @@
+/* ---------------------------------------------------
+   MORT'S HUNGRY - APPLICATION STYLES
+   --------------------------------------------------- */
+
+/* 1. CSS Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 2. Strict Mobile Viewport Locking */
+html, body {
+    width: 100vw;
+    height: 100vh;
+    background-color: #000000; /* Blends with the Phaser canvas border */
+    
+    /* Block native browser scrolling and overscroll bouncing */
+    overflow: hidden;
+    overscroll-behavior: none; 
+    
+    /* Block native touch gestures (pull-to-refresh, swipe back) */
+    touch-action: none; 
+    
+    /* Prevent text selection while tapping furiously */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* 3. Flexbox Centering */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 4. Game Container */
+#game-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Remove the blue tap highlight on mobile devices */
+canvas {
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
