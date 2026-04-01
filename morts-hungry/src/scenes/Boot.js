@@ -51,6 +51,35 @@ export default class Boot extends Phaser.Scene {
             loadingText.destroy();
         });
 
+        // ---------------------------------------------------
+        // FALLBACK GENERATOR (v1.1 Hotfix)
+        // ---------------------------------------------------
+        this.load.on('loaderror', (file) => {
+            console.warn(`Asset failed to load: ${file.key}. Generating fallback texture.`);
+            
+            // Dynamically generate a Phaser.Textures.CanvasTexture as a fallback
+            const texture = this.textures.createCanvas(file.key, 128, 128);
+            if (texture) {
+                const ctx = texture.getContext();
+                
+                // Fill the canvas with a bright, noticeable color (hot pink)
+                ctx.fillStyle = '#FF69B4'; 
+                ctx.fillRect(0, 0, 128, 128);
+                
+                // Draw the missing file.key text onto it
+                ctx.fillStyle = '#000000';
+                ctx.font = '16px monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Wrap or truncate text if it's too long, simple split for visibility
+                ctx.fillText(file.key, 64, 64);
+                
+                // Update the WebGL texture
+                texture.refresh();
+            }
+        });
+
         // Load Player Animations (Texture Swaps)
         this.load.image('mort_idle', 'assets/images/mort_idle.png');
         this.load.image('mort_catch', 'assets/images/mort_catch.png');
@@ -88,7 +117,7 @@ export default class Boot extends Phaser.Scene {
         this.load.image('ui_skull', 'assets/images/ui_skull.png');
 
         // Load Audio
-        this.load.audio('bgm_jungle_loop', 'assets/audio/bgm_jungle_loop.mp3'); // Assuming .mp3 extension
+        this.load.audio('bgm_jungle_loop', 'assets/audio/bgm_jungle_loop.mp3'); 
         this.load.audio('sfx_gulp', 'assets/audio/sfx_gulp.mp3');
         this.load.audio('sfx_crunch', 'assets/audio/sfx_crunch.mp3');
         this.load.audio('sfx_clang', 'assets/audio/sfx_clang.mp3');
