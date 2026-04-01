@@ -15,7 +15,7 @@ export default class Game extends Phaser.Scene {
         this.lives = GAME_CONFIG.player.baseLives;
         this.isGameOver = false;
 
-        // --- HOTFIX v1.1: Detailed Stats Tracking ---
+        // Detailed Stats Tracking
         this.runStats = {
             foodCaught: 0,
             hazardsHit: 0,
@@ -38,9 +38,11 @@ export default class Game extends Phaser.Scene {
     }
 
     create() {
-        // --- HOTFIX v1.1: Background Music ---
-        this.bgm = this.sound.add('bgm_jungle_loop', { loop: true, volume: 0.5 });
-        this.bgm.play();
+        // --- SAFE V1.2.1: Background Music Leveling & Safety Check ---
+        if (this.cache.audio.exists('bgm_jungle_loop')) {
+            this.bgm = this.sound.add('bgm_jungle_loop', { loop: true, volume: 0.1 });
+            this.bgm.play();
+        }
 
         // Backgrounds
         this.bgJungle = this.add.image(this.cameras.main.centerX, this.cameras.main.centerY, 'bg_jungle').setOrigin(0.5);
@@ -155,10 +157,11 @@ export default class Game extends Phaser.Scene {
         this.currentSpawnRate = Math.max(GAME_CONFIG.spawning.minRate, this.currentSpawnRate - GAME_CONFIG.spawning.rateDecay);
         this.spawnTimer.delay = this.currentSpawnRate;
 
-        // --- HOTFIX v1.1: BGM Tempo Scaling ---
-        // Maps the shrinking spawn rate to a faster music playback rate (max ~1.5x speed)
-        const tempoMultiplier = 1 + (1 - (this.currentSpawnRate / GAME_CONFIG.spawning.initialRate));
-        this.bgm.setRate(Math.min(tempoMultiplier, 1.5));
+        // BGM Tempo Scaling (Wrapped in safety check)
+        if (this.bgm) {
+            const tempoMultiplier = 1 + (1 - (this.currentSpawnRate / GAME_CONFIG.spawning.initialRate));
+            this.bgm.setRate(Math.min(tempoMultiplier, 1.5));
+        }
     }
 
     handlePlayerCatch(player, item) {
@@ -166,23 +169,31 @@ export default class Game extends Phaser.Scene {
         
         const config = item.itemConfig;
         
-        // --- HOTFIX v1.1: Catch Particle Explosion ---
-        const emitter = this.add.particles(item.x, item.y, 'vfx_dust', {
-            speed: { min: 50, max: 200 },
-            scale: { start: 1, end: 0 },
-            lifespan: 400,
-            blendMode: 'ADD'
-        });
-        emitter.explode(15);
-        this.time.delayedCall(500, () => emitter.destroy()); // Cleanup
+        // --- SAFE V1.2.1: Particle Check ---
+        if (this.textures.exists('vfx_dust')) {
+            try {
+                const emitter = this.add.particles(item.x, item.y, 'vfx_dust', {
+                    speed: { min: 50, max: 200 },
+                    scale: { start: 1, end: 0 },
+                    lifespan: 400,
+                    blendMode: 'ADD'
+                });
+                emitter.explode(15);
+                this.time.delayedCall(500, () => emitter.destroy()); // Cleanup
+            } catch (e) {
+                console.warn("Particle explosion failed, continuing game loop.");
+            }
+        }
 
         item.destroy(); 
 
         if (config.type === 'food') {
             this.runStats.foodCaught++;
             
-            // --- HOTFIX v1.1: Pitch Shifted SFX ---
-            this.sound.play('sfx_gulp', { detune: this.multiplier * 100 });
+            // --- SAFE V1.2.1: Audio Check ---
+            if (this.cache.audio.exists('sfx_gulp')) {
+                this.sound.play('sfx_gulp', { detune: (this.multiplier || 1) * 100 });
+            }
             player.playCatchJuice();
             
             this.comboCount++;
@@ -190,7 +201,9 @@ export default class Game extends Phaser.Scene {
                 this.multiplier++;
                 this.comboText.setText(`Combo: ${this.multiplier}x`);
                 this.tweens.add({ targets: this.comboText, scale: 1.5, yoyo: true, duration: 200 });
-                if (this.multiplier === 10) this.add.image(this.comboText.x + 150, this.comboText.y + 15, 'vfx_fire').setOrigin(0.5);
+                if (this.multiplier === 10 && this.textures.exists('vfx_fire')) {
+                    this.add.image(this.comboText.x + 150, this.comboText.y + 15, 'vfx_fire').setOrigin(0.5);
+                }
             }
 
             this.score += (config.points * this.multiplier);
@@ -200,11 +213,11 @@ export default class Game extends Phaser.Scene {
         } else if (config.type === 'hazard') {
             this.runStats.hazardsHit++;
             if (config.breaksCombo) {
-                this.sound.play('sfx_splat');
+                if (this.cache.audio.exists('sfx_splat')) this.sound.play('sfx_splat');
                 this.resetCombo();
             } else {
                 if (player.takeDamage()) {
-                    this.sound.play('sfx_hurt');
+                    if (this.cache.audio.exists('sfx_hurt')) this.sound.play('sfx_hurt');
                     this.cameras.main.shake(200, 0.02);
                     this.lives -= config.damage;
                     this.livesText.setText(`Lives: ${this.lives}`);
@@ -215,22 +228,34 @@ export default class Game extends Phaser.Scene {
             }
         } else if (config.type === 'powerup') {
             this.runStats.powerupsUsed++;
-            this.sound.play('sfx_powerup');
+            if (this.cache.audio.exists('sfx_powerup')) this.sound.play('sfx_powerup');
             player.playCatchJuice();
             this.applyPowerUp(config);
         } else if (config.type === 'special') {
             this.runStats.specialsTriggered++;
-            this.sound.play('sfx_powerup');
+            if (this.cache.audio.exists('sfx_powerup')) this.sound.play('sfx_powerup');
             player.playCatchJuice();
             this.triggerSpecialEvent(config.event);
         }
     }
 
     handleItemHitFloor(item, floor) {
+        // --- SAFE V1.2.1: Method Existence Check ---
+        if (!item || typeof item.hitFloor !== 'function') {
+            return; 
+        }
+
         if (item.hasHitFloor) return;
+        
         item.hitFloor(); 
-        this.sound.play('sfx_splat');
-        if (item.itemConfig.type === 'food') this.resetCombo();
+        
+        if (this.cache.audio.exists('sfx_splat')) {
+            this.sound.play('sfx_splat', { volume: 0.5 });
+        }
+        
+        if (item.itemConfig && item.itemConfig.type === 'food') {
+            this.resetCombo();
+        }
     }
 
     resetCombo() {
@@ -240,10 +265,13 @@ export default class Game extends Phaser.Scene {
     }
 
     applyPowerUp(config) {
+        // --- SAFE V1.2.1: Relative Scaling for Pill ---
+        const base = GAME_CONFIG.player.displayScale || 1;
+        
         if (config.effect === 'expand_jaw') {
-            this.player.setScale(2, 1);
+            this.player.setScale(base * 2, base); // Scale relative to Mort's standard size
             this.player.startPowerUpTimer(config.duration, 0xff0000); // Red bar
-            this.time.delayedCall(config.duration, () => this.player.setScale(1, 1));
+            this.time.delayedCall(config.duration, () => this.player.setScale(base));
         } else if (config.effect === 'magnet') {
             this.hasMagnet = true;
             this.player.startPowerUpTimer(config.duration, 0x00ff00); // Green bar
@@ -254,10 +282,11 @@ export default class Game extends Phaser.Scene {
     }
 
     triggerSpecialEvent(eventName) {
-        // --- HOTFIX v1.1: Special Event Overrides ---
         // Cancel active power-ups
-        this.player.setScale(1, 1);
+        const base = GAME_CONFIG.player.displayScale || 1;
+        this.player.setScale(base, base);
         this.hasMagnet = (this.saveData.unlockedUpgrades.telekinesis > 0);
+        
         if (this.player.powerUpTween) {
             this.player.powerUpTween.stop();
             this.player.powerUpBar.setAlpha(0);
@@ -270,11 +299,13 @@ export default class Game extends Phaser.Scene {
         }
 
         if (eventName === 'mango_frenzy') {
-            // --- HOTFIX v1.1: Hazard Cleansing ---
+            // Hazard Cleansing
             this.items.getChildren().forEach(item => {
-                if (item.itemConfig.type === 'hazard') {
-                    const poof = this.add.image(item.x, item.y, 'vfx_dust');
-                    this.tweens.add({ targets: poof, alpha: 0, duration: 500, onComplete: () => poof.destroy() });
+                if (item.itemConfig && item.itemConfig.type === 'hazard') {
+                    if (this.textures.exists('vfx_dust')) {
+                        const poof = this.add.image(item.x, item.y, 'vfx_dust');
+                        this.tweens.add({ targets: poof, alpha: 0, duration: 500, onComplete: () => poof.destroy() });
+                    }
                     item.destroy();
                 }
             });
@@ -295,9 +326,11 @@ export default class Game extends Phaser.Scene {
             this.lives++;
             this.livesText.setText(`Lives: ${this.lives}`);
             this.items.getChildren().forEach(item => {
-                if (item.itemConfig.type === 'hazard') {
-                    const poof = this.add.image(item.x, item.y, 'vfx_dust');
-                    this.tweens.add({ targets: poof, alpha: 0, duration: 500, onComplete: () => poof.destroy() });
+                if (item.itemConfig && item.itemConfig.type === 'hazard') {
+                    if (this.textures.exists('vfx_dust')) {
+                        const poof = this.add.image(item.x, item.y, 'vfx_dust');
+                        this.tweens.add({ targets: poof, alpha: 0, duration: 500, onComplete: () => poof.destroy() });
+                    }
                     item.destroy();
                 }
             });
@@ -308,7 +341,7 @@ export default class Game extends Phaser.Scene {
         this.isGameOver = true;
         this.physics.pause();
         this.spawnTimer.remove();
-        this.bgm.stop(); // Stop music on game over
+        if (this.bgm) this.bgm.stop(); 
 
         const currencyEarned = Math.floor(this.score * GAME_CONFIG.economy.currencyConversion);
         
@@ -319,7 +352,6 @@ export default class Game extends Phaser.Scene {
         const overlay = this.add.graphics();
         overlay.fillStyle(0x000000, 0.85).fillRect(0, 0, this.cameras.main.width, this.cameras.main.height).setDepth(100);
 
-        // --- HOTFIX v1.1: Detailed Stats Rendering ---
         this.add.text(this.cameras.main.centerX, 150, 'GAME OVER', { font: '64px monospace', fill: '#ff0000' }).setOrigin(0.5).setDepth(101);
         
         this.add.text(this.cameras.main.centerX, 250, `Final Score: ${this.score}`, { font: '48px monospace', fill: '#fff' }).setOrigin(0.5).setDepth(101);
@@ -335,7 +367,7 @@ export default class Game extends Phaser.Scene {
             .setOrigin(0.5).setDepth(101).setInteractive();
 
         menuBtn.on('pointerdown', () => {
-            this.sound.play('sfx_ui_click');
+            if (this.cache.audio.exists('sfx_ui_click')) this.sound.play('sfx_ui_click');
             this.scene.start('Menu');
         });
     }
