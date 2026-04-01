@@ -239,20 +239,32 @@ export default class Game extends Phaser.Scene {
         }
     }
 
-    handleItemHitFloor(item, floor) {
-        // --- SAFE V1.2.1: Method Existence Check ---
-        if (!item || typeof item.hitFloor !== 'function') {
-            return; 
+    handleItemHitFloor(obj1, obj2) {
+        // --- SAFE V1.2.2: The Smart Sorter ---
+        // Phaser sometimes swaps the objects. Let's find out which one is the Item.
+        let item = null;
+        
+        if (obj1 && typeof obj1.hitFloor === 'function') {
+            item = obj1;
+        } else if (obj2 && typeof obj2.hitFloor === 'function') {
+            item = obj2;
         }
 
+        // If neither object is an Item (somehow), safely abort.
+        if (!item) return;
+
+        // If it's already splattered, don't trigger the logic twice
         if (item.hasHitFloor) return;
         
+        // Run the splatter and despawn logic from Item.js
         item.hitFloor(); 
         
+        // Play the sound
         if (this.cache.audio.exists('sfx_splat')) {
             this.sound.play('sfx_splat', { volume: 0.5 });
         }
         
+        // Break the combo if food hits the floor
         if (item.itemConfig && item.itemConfig.type === 'food') {
             this.resetCombo();
         }
