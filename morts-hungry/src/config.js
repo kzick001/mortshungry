@@ -34,43 +34,43 @@ export const GAME_CONFIG = {
     items: {
         mango: { 
             type: 'food', weight: 50, points: 10, speedMult: 1.0, 
-            behavior: 'linear', displayScale: 0.4 
+            behavior: 'linear', displayScale: 0.1 
         },
         coconut: { 
             type: 'food', weight: 25, points: 25, speedMult: 1.5, 
-            behavior: 'linear', displayScale: 0.4 
+            behavior: 'linear', displayScale: 0.1 
         },
         papaya: { 
             type: 'food', weight: 15, points: 50, speedMult: 1.0, 
-            behavior: 'sine_wave', displayScale: 0.4 
+            behavior: 'sine_wave', displayScale: 0.1 
         },
         anvil: { 
             type: 'hazard', weight: 5, damage: 1, speedMult: 2.0, 
-            behavior: 'linear', displayScale: 0.5 
+            behavior: 'linear', displayScale: 0.1 
         },
         trap: { 
             type: 'hazard', weight: 3, damage: 1, speedMult: 0.5, 
-            behavior: 'linear', haltDuration: 1500, displayScale: 0.5 
+            behavior: 'linear', haltDuration: 1500, displayScale: 0.1 
         },
         rotten: { 
             type: 'hazard', weight: 2, damage: 0, speedMult: 1.0, 
-            behavior: 'linear', breaksCombo: true, displayScale: 0.4 
+            behavior: 'linear', breaksCombo: true, displayScale: 0.1 
         },
         pill: { 
             type: 'powerup', weight: 1, speedMult: 0.5, 
-            behavior: 'linear', duration: 10000, effect: 'expand_jaw', displayScale: 0.5 
+            behavior: 'linear', duration: 10000, effect: 'expand_jaw', displayScale: 0.1 
         },
         syringe: { 
             type: 'powerup', weight: 1, speedMult: 0.5, 
-            behavior: 'linear', duration: 10000, effect: 'magnet', displayScale: 0.5 
+            behavior: 'linear', duration: 10000, effect: 'magnet', displayScale: 0.1 
         },
         special_star: { 
             type: 'special', weight: 1, speedMult: 0.5, 
-            behavior: 'linear', event: 'random_special', displayScale: 0.6 
+            behavior: 'linear', event: 'random_special', displayScale: 0.1 
         },
         special_foot: { 
             type: 'special', weight: 0, speedMult: 0.5, 
-            behavior: 'linear', event: 'clear_hazards', displayScale: 0.6 
+            behavior: 'linear', event: 'clear_hazards', displayScale: 0.1 
         }
     },
 
