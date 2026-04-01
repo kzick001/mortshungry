@@ -37,10 +37,20 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         // State variables
         this.isInvulnerable = false;
         this.currentSpeed = this.config.baseSpeed;
+
+        // --- HOTFIX v1.1: Power-Up UI Bar ---
+        this.powerUpBar = this.scene.add.graphics();
+        this.powerUpBar.setDepth(this.depth + 1);
+        this.powerUpTween = null;
     }
 
     update(time, delta) {
         this.handleInput();
+
+        // Keep the power-up bar positioned directly beneath Mort
+        if (this.powerUpBar) {
+            this.powerUpBar.setPosition(this.x, this.y + (this.height / 2) + 10);
+        }
     }
 
     handleInput() {
@@ -57,15 +67,20 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             moving = true;
         }
 
-        // Touch / Pointer Input (Mobile support)
+        // --- HOTFIX v1.1: Fixed Mobile Touch Input ---
+        // Evaluates pointer against the screen center instead of the player's X coordinate
         if (this.scene.input.activePointer.isDown) {
             const pointerX = this.scene.input.activePointer.x;
-            // Add a small deadzone so he doesn't jitter when directly under the finger
-            if (Math.abs(pointerX - this.x) > 10) { 
-                if (pointerX < this.x) {
+            const screenCenter = this.scene.cameras.main.centerX;
+            
+            // Add a tiny deadzone in the exact center to prevent jittering if they rest their thumb there
+            if (Math.abs(pointerX - screenCenter) > 5) { 
+                if (pointerX < screenCenter) {
+                    // Touch on left half of screen
                     this.body.setVelocityX(-this.currentSpeed);
                     this.setFlipX(true);
                 } else {
+                    // Touch on right half of screen
                     this.body.setVelocityX(this.currentSpeed);
                     this.setFlipX(false);
                 }
@@ -126,5 +141,44 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         });
 
         return true; // Successfully took damage
+    }
+
+    // --- HOTFIX v1.1: Power-Up Duration Visualizer ---
+    /**
+     * Renders a shrinking colored bar underneath Mort to indicate active power-up time.
+     * @param {number} duration - The lifespan of the power-up in ms.
+     * @param {number} color - Hex color code (e.g., 0xFF0000 for Red, 0x00FF00 for Green).
+     */
+    startPowerUpTimer(duration, color) {
+        // Stop existing tween if one is active to prevent conflicting shrinks
+        if (this.powerUpTween) {
+            this.powerUpTween.stop();
+        }
+
+        // Redraw the bar
+        this.powerUpBar.clear();
+        this.powerUpBar.fillStyle(color, 1);
+        
+        // Draw a rectangle centered horizontally at 0 so scaleX shrinks it nicely towards the middle
+        this.powerUpBar.fillRect(-40, 0, 80, 10); 
+        this.powerUpBar.setScale(1, 1);
+        this.powerUpBar.setAlpha(1);
+
+        // Tween the scaleX to 0 over the duration
+        this.powerUpTween = this.scene.tweens.add({
+            targets: this.powerUpBar,
+            scaleX: 0,
+            duration: duration,
+            ease: 'Linear',
+            onComplete: () => {
+                this.powerUpBar.setAlpha(0);
+            }
+        });
+    }
+
+    // Clean up the graphics object if the player is destroyed
+    destroy(fromScene) {
+        if (this.powerUpBar) this.powerUpBar.destroy();
+        super.destroy(fromScene);
     }
 }
