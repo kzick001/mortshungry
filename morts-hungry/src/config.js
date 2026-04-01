@@ -13,7 +13,7 @@ export const GAME_CONFIG = {
         baseLives: 3,
         baseSpeed: 600,
         friction: 0.85,
-        displayScale: 0.5,      // Visual size (50% of source PNG)
+        displayScale: 1,      // Visual size (50% of source PNG)
         hitboxScaleX: 0.85,     // Physics hitbox (relative to scaled sprite)
         hitboxScaleY: 0.85,
         juice: {
