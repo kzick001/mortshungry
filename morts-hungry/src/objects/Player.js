@@ -7,38 +7,27 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
         this.scene = scene;
         this.config = GAME_CONFIG.player;
         
-        // Add to scene and enable physics
         this.scene.add.existing(this);
         this.scene.physics.add.existing(this);
 
-        // Core Physics Setup
-        this.body.setCollideWorldBounds(true);
-        this.body.setAllowGravity(false); // Mort is locked to the floor, no gravity
-        this.body.setImmovable(true);     // Falling items shouldn't push him down
+        // --- v1.2 Visual Scaling ---
+        this.setScale(this.config.displayScale || 1);
 
-        // Hitbox Forgiveness ("Coyote Time" - 15% reduction from config)
+        this.body.setCollideWorldBounds(true);
+        this.body.setAllowGravity(false);
+        this.body.setImmovable(true);
+
         const hitboxWidth = this.width * this.config.hitboxScaleX;
         const hitboxHeight = this.height * this.config.hitboxScaleY;
         this.body.setSize(hitboxWidth, hitboxHeight);
-        
-        // Center the new smaller hitbox
-        this.body.setOffset(
-            (this.width - hitboxWidth) / 2, 
-            (this.height - hitboxHeight) / 2
-        );
+        this.body.setOffset((this.width - hitboxWidth) / 2, (this.height - hitboxHeight) / 2);
 
-        // Movement friction (Drag)
         this.body.setDragX(this.config.baseSpeed * this.config.friction);
-
-        // Input mapping
         this.cursors = this.scene.input.keyboard.createCursorKeys();
         this.keys = this.scene.input.keyboard.addKeys('A,D');
-
-        // State variables
         this.isInvulnerable = false;
         this.currentSpeed = this.config.baseSpeed;
 
-        // --- HOTFIX v1.1: Power-Up UI Bar ---
         this.powerUpBar = this.scene.add.graphics();
         this.powerUpBar.setDepth(this.depth + 1);
         this.powerUpTween = null;
@@ -46,41 +35,31 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
 
     update(time, delta) {
         this.handleInput();
-
-        // Keep the power-up bar positioned directly beneath Mort
         if (this.powerUpBar) {
-            this.powerUpBar.setPosition(this.x, this.y + (this.height / 2) + 10);
+            this.powerUpBar.setPosition(this.x, this.y + (this.displayHeight / 2) + 10);
         }
     }
 
     handleInput() {
         let moving = false;
-
-        // Keyboard Input
         if (this.cursors.left.isDown || this.keys.A.isDown) {
             this.body.setVelocityX(-this.currentSpeed);
-            this.setFlipX(true); // Face left
+            this.setFlipX(true);
             moving = true;
         } else if (this.cursors.right.isDown || this.keys.D.isDown) {
             this.body.setVelocityX(this.currentSpeed);
-            this.setFlipX(false); // Face right
+            this.setFlipX(false);
             moving = true;
         }
 
-        // --- HOTFIX v1.1: Fixed Mobile Touch Input ---
-        // Evaluates pointer against the screen center instead of the player's X coordinate
         if (this.scene.input.activePointer.isDown) {
             const pointerX = this.scene.input.activePointer.x;
             const screenCenter = this.scene.cameras.main.centerX;
-            
-            // Add a tiny deadzone in the exact center to prevent jittering if they rest their thumb there
             if (Math.abs(pointerX - screenCenter) > 5) { 
                 if (pointerX < screenCenter) {
-                    // Touch on left half of screen
                     this.body.setVelocityX(-this.currentSpeed);
                     this.setFlipX(true);
                 } else {
-                    // Touch on right half of screen
                     this.body.setVelocityX(this.currentSpeed);
                     this.setFlipX(false);
                 }
@@ -88,95 +67,63 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
             }
         }
 
-        // Return to idle texture if not catching/hurt
         if (!this.scene.tweens.isTweening(this) && this.texture.key !== 'mort_hurt') {
             this.setTexture('mort_idle');
         }
     }
 
-    /**
-     * Called when Mort successfully catches a food item.
-     * Triggers the squash & stretch juice and mouth-open texture.
-     */
     playCatchJuice() {
         this.setTexture('mort_catch');
-        
-        // Stop any existing scale tweens to prevent distortion bugs
         this.scene.tweens.killTweensOf(this, 'scaleX');
         this.scene.tweens.killTweensOf(this, 'scaleY');
-        this.setScale(1);
+        this.setScale(this.config.displayScale); // Reset to base scale
 
         this.scene.tweens.add({
             targets: this,
-            scaleX: this.config.juice.stretchX,
-            scaleY: this.config.juice.squashY,
+            scaleX: this.config.displayScale * this.config.juice.stretchX,
+            scaleY: this.config.displayScale * this.config.juice.squashY,
             duration: this.config.juice.tweenDuration,
             yoyo: true,
             ease: 'Quad.easeOut'
         });
     }
 
-    /**
-     * Called when Mort hits a hazard.
-     * Triggers dizzy texture, iFrames, and blinking effect.
-     */
     takeDamage() {
-        if (this.isInvulnerable) return false; // Prevent multi-hits
-
+        if (this.isInvulnerable) return false;
         this.isInvulnerable = true;
         this.setTexture('mort_hurt');
-
-        // iFrame Blinking Tween
         this.scene.tweens.add({
             targets: this,
             alpha: 0.3,
             duration: 150,
             yoyo: true,
-            repeat: Math.floor(this.config.juice.iFrameDuration / 300), // Blink for the iFrame duration
+            repeat: Math.floor(this.config.juice.iFrameDuration / 300),
             onComplete: () => {
                 this.isInvulnerable = false;
                 this.alpha = 1;
                 this.setTexture('mort_idle');
             }
         });
-
-        return true; // Successfully took damage
+        return true;
     }
 
-    // --- HOTFIX v1.1: Power-Up Duration Visualizer ---
-    /**
-     * Renders a shrinking colored bar underneath Mort to indicate active power-up time.
-     * @param {number} duration - The lifespan of the power-up in ms.
-     * @param {number} color - Hex color code (e.g., 0xFF0000 for Red, 0x00FF00 for Green).
-     */
     startPowerUpTimer(duration, color) {
-        // Stop existing tween if one is active to prevent conflicting shrinks
-        if (this.powerUpTween) {
-            this.powerUpTween.stop();
-        }
-
-        // Redraw the bar
+        if (this.powerUpTween) this.powerUpTween.stop();
         this.powerUpBar.clear();
         this.powerUpBar.fillStyle(color, 1);
-        
-        // Draw a rectangle centered horizontally at 0 so scaleX shrinks it nicely towards the middle
         this.powerUpBar.fillRect(-40, 0, 80, 10); 
         this.powerUpBar.setScale(1, 1);
         this.powerUpBar.setAlpha(1);
 
-        // Tween the scaleX to 0 over the duration
         this.powerUpTween = this.scene.tweens.add({
             targets: this.powerUpBar,
             scaleX: 0,
             duration: duration,
             ease: 'Linear',
-            onComplete: () => {
-                this.powerUpBar.setAlpha(0);
-            }
+            onComplete: () => { this.powerUpBar.setAlpha(0); }
         });
     }
 
-    // Clean up the graphics object if the player is destroyed
     destroy(fromScene) {
         if (this.powerUpBar) this.powerUpBar.destroy();
         super.destroy(fromScene);
