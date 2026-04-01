@@ -116,15 +116,15 @@ export default class Boot extends Phaser.Scene {
         this.load.image('ui_crown', 'assets/images/ui_crown.png');
         this.load.image('ui_skull', 'assets/images/ui_skull.png');
 
-        // Load Audio
-        this.load.audio('bgm_jungle_loop', 'assets/audio/bgm_jungle_loop.mp3'); 
-        this.load.audio('sfx_gulp', 'assets/audio/sfx_gulp.mp3');
-        this.load.audio('sfx_crunch', 'assets/audio/sfx_crunch.mp3');
-        this.load.audio('sfx_clang', 'assets/audio/sfx_clang.mp3');
-        this.load.audio('sfx_splat', 'assets/audio/sfx_splat.mp3');
-        this.load.audio('sfx_powerup', 'assets/audio/sfx_powerup.mp3');
-        this.load.audio('sfx_hurt', 'assets/audio/sfx_hurt.mp3');
-        this.load.audio('sfx_ui_click', 'assets/audio/sfx_ui_click.mp3');
+        // Load Audio - SWAPPED TO .WAV FOR DEVELOPMENT
+        this.load.audio('bgm_jungle_loop', 'assets/audio/bgm_jungle_loop.wav'); 
+        this.load.audio('sfx_gulp', 'assets/audio/sfx_gulp.wav');
+        this.load.audio('sfx_crunch', 'assets/audio/sfx_crunch.wav');
+        this.load.audio('sfx_clang', 'assets/audio/sfx_clang.wav');
+        this.load.audio('sfx_splat', 'assets/audio/sfx_splat.wav');
+        this.load.audio('sfx_powerup', 'assets/audio/sfx_powerup.wav');
+        this.load.audio('sfx_hurt', 'assets/audio/sfx_hurt.wav');
+        this.load.audio('sfx_ui_click', 'assets/audio/sfx_ui_click.wav');
     }
 
     create() {
